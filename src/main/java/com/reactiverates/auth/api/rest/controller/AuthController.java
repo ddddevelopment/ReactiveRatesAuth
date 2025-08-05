@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.reactiverates.auth.application.service.AuthService;
 import com.reactiverates.auth.domain.model.AuthResponse;
 import com.reactiverates.auth.domain.model.LoginRequest;
+import com.reactiverates.auth.domain.model.LogoutResponse;
 import com.reactiverates.auth.domain.model.RefreshTokenRequest;
 import com.reactiverates.auth.domain.model.RegisterRequest;
 
@@ -109,15 +110,19 @@ public class AuthController {
     @ApiResponses(value = {
         @ApiResponse(
             responseCode = "200",
-            description = "Успешный выход из системы"
+            description = "Успешный выход из системы",
+            content = @Content(schema = @Schema(implementation = LogoutResponse.class))
         ),
         @ApiResponse(
             responseCode = "400",
             description = "Некорректные данные запроса"
+        ),
+        @ApiResponse(
+            responseCode = "401",
+            description = "Недействительный refresh токен"
         )
     })
-    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        authService.logout(request.refreshToken());
-        return ResponseEntity.ok().build();
+    public ResponseEntity<LogoutResponse> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.logout(request.refreshToken()));
     }
 }

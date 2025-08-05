@@ -23,9 +23,17 @@ public class JwtService {
     public String generateRefreshToken(UserDetails userDetails) {
         return jwtUtil.generateRefreshToken(userDetails);
     }
+    
+    public String generateRefreshToken(UserDetails userDetails, String tokenId) {
+        return jwtUtil.generateRefreshToken(userDetails, tokenId);
+    }
 
     public String extractUsername(String token) {
         return jwtUtil.extractUsername(token);
+    }
+    
+    public String extractTokenId(String token) {
+        return jwtUtil.extractTokenId(token);
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {

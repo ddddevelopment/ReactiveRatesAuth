@@ -20,25 +20,34 @@ public class RefreshTokenService {
     
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
-    
+
     @Value("${jwt.refresh-token.expiration:604800000}")
     private Long refreshTokenExpiration;
     
     public RefreshToken createRefreshToken(User user) {
         // Удаляем старый refresh token если существует
-        refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
+        refreshTokenRepository.findByUser(user).ifPresent(oldToken -> {
+            refreshTokenRepository.delete(oldToken);
+        });
+        
+        // Генерируем уникальный UUID для БД
+        String tokenId = UUID.randomUUID().toString();
         
         RefreshToken refreshToken = RefreshToken.builder()
             .user(user)
-            .token(UUID.randomUUID().toString())
+            .token(tokenId) // UUID в БД
             .expiryDate(Instant.now().plusMillis(refreshTokenExpiration))
             .build();
         
         return refreshTokenRepository.save(refreshToken);
     }
     
-    public Optional<RefreshToken> findByToken(String token) {
-        return refreshTokenRepository.findByToken(token);
+    public String generateRefreshTokenJwt(User user, String tokenId) {
+        return jwtService.generateRefreshToken(user, tokenId);
+    }
+    
+    public Optional<RefreshToken> findByTokenId(String tokenId) {
+        return refreshTokenRepository.findByToken(tokenId);
     }
     
     public RefreshToken verifyExpiration(RefreshToken token) {
@@ -49,8 +58,13 @@ public class RefreshTokenService {
         return token;
     }
     
-    public void deleteByUser(User user) {
-        refreshTokenRepository.deleteByUser(user);
+    public boolean deleteByUser(User user) {
+        Optional<RefreshToken> existingToken = refreshTokenRepository.findByUser(user);
+        if (existingToken.isPresent()) {
+            refreshTokenRepository.deleteByUser(user);
+            return true;
+        }
+        return false;
     }
     
     public void deleteExpiredTokens() {

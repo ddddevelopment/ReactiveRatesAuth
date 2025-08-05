@@ -108,6 +108,15 @@ Content-Type: application/json
 }
 ```
 
+**Ответ:**
+```json
+{
+  "username": "john_doe",
+  "message": "Successfully logged out",
+  "details": "All active sessions have been terminated"
+}
+```
+
 ## Использование токенов
 
 ### Access Token

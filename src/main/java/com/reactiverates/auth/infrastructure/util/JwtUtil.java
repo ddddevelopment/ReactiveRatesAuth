@@ -36,6 +36,10 @@ public class JwtUtil {
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
+    
+    public String extractTokenId(String token) {
+        return extractClaim(token, claims -> claims.get("tokenId", String.class));
+    }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
@@ -63,6 +67,13 @@ public class JwtUtil {
     public String generateRefreshToken(UserDetails userDetails) { 
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
+        return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
+    }
+    
+    public String generateRefreshToken(UserDetails userDetails, String tokenId) { 
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", "refresh");
+        claims.put("tokenId", tokenId);
         return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
     }
 
