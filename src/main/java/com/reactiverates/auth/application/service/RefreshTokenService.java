@@ -1,0 +1,59 @@
+package com.reactiverates.auth.application.service;
+
+import java.time.Instant;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import com.reactiverates.auth.domain.exception.TokenException;
+import com.reactiverates.auth.infrastructure.persistance.entity.RefreshToken;
+import com.reactiverates.auth.infrastructure.persistance.entity.User;
+import com.reactiverates.auth.infrastructure.persistance.repository.RefreshTokenRepository;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class RefreshTokenService {
+    
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final JwtService jwtService;
+    
+    @Value("${jwt.refresh-token.expiration:604800000}")
+    private Long refreshTokenExpiration;
+    
+    public RefreshToken createRefreshToken(User user) {
+        // Удаляем старый refresh token если существует
+        refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
+        
+        RefreshToken refreshToken = RefreshToken.builder()
+            .user(user)
+            .token(UUID.randomUUID().toString())
+            .expiryDate(Instant.now().plusMillis(refreshTokenExpiration))
+            .build();
+        
+        return refreshTokenRepository.save(refreshToken);
+    }
+    
+    public Optional<RefreshToken> findByToken(String token) {
+        return refreshTokenRepository.findByToken(token);
+    }
+    
+    public RefreshToken verifyExpiration(RefreshToken token) {
+        if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
+            refreshTokenRepository.delete(token);
+            throw new TokenException("Refresh token was expired. Please make a new signin request");
+        }
+        return token;
+    }
+    
+    public void deleteByUser(User user) {
+        refreshTokenRepository.deleteByUser(user);
+    }
+    
+    public void deleteExpiredTokens() {
+        refreshTokenRepository.deleteExpiredTokens(Instant.now());
+    }
+} 
