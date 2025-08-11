@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package com.reactiverates.users;
+
+option java_multiple_files = true;
+option java_package = "com.reactiverates.users.grpc";
+option java_outer_classname = "UsersProto";
+
+service UsersService {
+  rpc CreateUser (CreateUserRequest) returns (UserResponse);
+  rpc GetUserById (GetUserByIdRequest) returns (UserResponse);
+  rpc GetUserByUsername (GetUserByUsernameRequest) returns (UserResponse);
+}
+
+message CreateUserRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string phone_number = 6;
+  UserRole role = 7;
+}
+
+message GetUserByIdRequest { int64 user_id = 1; }
+message GetUserByUsernameRequest { string username = 1; }
+
+message UserResponse {
+  int64 id = 1;
+  string username = 2;
+  string email = 3;
+  string first_name = 4;
+  string last_name = 5;
+  string phone_number = 6;
+  UserRole role = 7;
+  bool is_active = 8;
+  string created_at = 9;
+  string updated_at = 10;
+  string full_name = 11;
+}
+
+enum UserRole {
+  USER = 0;
+  ADMIN = 1;
+  MODERATOR = 2;
+}

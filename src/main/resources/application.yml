@@ -19,6 +19,13 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
+  
+  grpc:
+    client:
+      channels:
+        users-service:
+          address: localhost:9090
+          negotiation-type: plaintext
 
 jwt:
   secret: mySecretKeymySecretKeymySecretKeymySecretKey
