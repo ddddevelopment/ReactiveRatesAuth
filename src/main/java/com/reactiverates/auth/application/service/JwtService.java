@@ -1,5 +1,8 @@
 package com.reactiverates.auth.application.service;
 
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -34,6 +37,10 @@ public class JwtService {
     
     public String extractTokenId(String token) {
         return jwtUtil.extractTokenId(token);
+    }
+    
+    public List<Map<String, String>> extractAuthorities(String token) {
+        return jwtUtil.extractAuthorities(token);
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {

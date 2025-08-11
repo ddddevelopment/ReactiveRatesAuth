@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -40,6 +41,17 @@ public class JwtUtil {
     public String extractTokenId(String token) {
         return extractClaim(token, claims -> claims.get("tokenId", String.class));
     }
+    
+    @SuppressWarnings("unchecked")
+    public List<Map<String, String>> extractAuthorities(String token) {
+        return extractClaim(token, claims -> {
+            Object authoritiesObj = claims.get("authorities");
+            if (authoritiesObj instanceof List) {
+                return (List<Map<String, String>>) authoritiesObj;
+            }
+            return List.of();
+        });
+    }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         final Claims claims = extractAllClaims(token);
@@ -61,12 +73,18 @@ public class JwtUtil {
     public String generateAccessToken(UserDetails userDetails) { 
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "access");
+        claims.put("authorities", userDetails.getAuthorities().stream()
+            .map(authority -> Map.of("authority", authority.getAuthority()))
+            .toList());
         return createToken(claims, userDetails.getUsername(), accessTokenExpiration);
     }
 
     public String generateRefreshToken(UserDetails userDetails) { 
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
+        claims.put("authorities", userDetails.getAuthorities().stream()
+            .map(authority -> Map.of("authority", authority.getAuthority()))
+            .toList());
         return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
     }
     
@@ -74,6 +92,9 @@ public class JwtUtil {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
         claims.put("tokenId", tokenId);
+        claims.put("authorities", userDetails.getAuthorities().stream()
+            .map(authority -> Map.of("authority", authority.getAuthority()))
+            .toList());
         return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
     }
 
