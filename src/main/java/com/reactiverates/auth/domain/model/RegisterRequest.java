@@ -20,4 +20,13 @@ public class RegisterRequest {
     @NotBlank(message = "Password is required")
     @Schema(description = "Пароль пользователя", example = "password123")
     private String password;
+
+    @Schema(description = "Имя пользователя", example = "John")
+    private String firstName;
+
+    @Schema(description = "Фамилия пользователя", example = "Doe")
+    private String lastName;
+
+    @Schema(description = "Номер телефона пользователя", example = "+1234567890")
+    private String phoneNumber;
 }

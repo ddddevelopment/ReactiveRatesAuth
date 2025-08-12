@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.reactiverates.auth.domain.exception.TokenException;
+import com.reactiverates.auth.domain.model.UserDto;
 import com.reactiverates.auth.infrastructure.persistance.entity.RefreshToken;
 import com.reactiverates.auth.infrastructure.persistance.entity.User;
 import com.reactiverates.auth.infrastructure.persistance.repository.RefreshTokenRepository;
@@ -42,8 +43,26 @@ public class RefreshTokenService {
         return refreshTokenRepository.save(refreshToken);
     }
     
+    public RefreshToken createRefreshToken(UserDto grpcUser) {
+        // Для GrpcUser мы создаем временный User entity для хранения в БД
+        // Это необходимо для совместимости с существующей структурой БД
+        User tempUser = User.builder()
+            .id(grpcUser.getId())
+            .username(grpcUser.getUsername())
+            .email(grpcUser.getEmail())
+            .password(grpcUser.getPassword())
+            .role(User.Role.valueOf(grpcUser.getRole().name()))
+            .build();
+        
+        return createRefreshToken(tempUser);
+    }
+    
     public String generateRefreshTokenJwt(User user, String tokenId) {
         return jwtService.generateRefreshToken(user, tokenId);
+    }
+    
+    public String generateRefreshTokenJwt(UserDto grpcUser, String tokenId) {
+        return jwtService.generateRefreshToken(grpcUser, tokenId);
     }
     
     public Optional<RefreshToken> findByTokenId(String tokenId) {
@@ -65,6 +84,19 @@ public class RefreshTokenService {
             return true;
         }
         return false;
+    }
+    
+    public boolean deleteByUser(UserDto grpcUser) {
+        // Создаем временный User entity для поиска в БД
+        User tempUser = User.builder()
+            .id(grpcUser.getId())
+            .username(grpcUser.getUsername())
+            .email(grpcUser.getEmail())
+            .password(grpcUser.getPassword())
+            .role(User.Role.valueOf(grpcUser.getRole().name()))
+            .build();
+        
+        return deleteByUser(tempUser);
     }
     
     public void deleteExpiredTokens() {

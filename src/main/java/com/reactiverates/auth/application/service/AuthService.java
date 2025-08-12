@@ -2,17 +2,15 @@ package com.reactiverates.auth.application.service;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.reactiverates.auth.domain.exception.TokenException;
 import com.reactiverates.auth.domain.model.AuthResponse;
+import com.reactiverates.auth.domain.model.UserDto;
 import com.reactiverates.auth.domain.model.LoginRequest;
 import com.reactiverates.auth.domain.model.LogoutResponse;
 import com.reactiverates.auth.domain.model.RegisterRequest;
 import com.reactiverates.auth.infrastructure.persistance.entity.RefreshToken;
-import com.reactiverates.auth.infrastructure.persistance.entity.User;
-import com.reactiverates.auth.infrastructure.persistance.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,49 +19,62 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 @Slf4j
 public class AuthService {
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
+    private final UsersGrpcClient usersGrpcClient;
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
+        // Проверяем существование пользователя через gRPC сервис
+        try {
+            usersGrpcClient.getUserByUsername(request.getUsername());
             throw new TokenException("User already exists");
+        } catch (Exception e) {
+            // Пользователь не найден, продолжаем регистрацию
+            log.info("User not found in gRPC service, proceeding with registration: {}", request.getUsername());
         }
 
-        if (userRepository.existsByEmail(request.getEmail())) { 
-            throw new TokenException("Email already exists");
+        // Создаем пользователя через gRPC сервис
+        try {
+            usersGrpcClient.createUser(
+                request.getUsername(),
+                request.getEmail(),
+                request.getPassword(),
+                request.getFirstName() != null ? request.getFirstName() : "",
+                request.getLastName() != null ? request.getLastName() : "",
+                request.getPhoneNumber() != null ? request.getPhoneNumber() : ""
+            );
+            
+            log.info("User created successfully via gRPC: {}", request.getUsername());
+        } catch (Exception e) {
+            log.error("Failed to create user via gRPC: {}", e.getMessage(), e);
+            throw new TokenException("Failed to create user: " + e.getMessage());
         }
 
-        var user = User.builder()
-            .username(request.getUsername())
-            .email(request.getEmail())
-            .password(passwordEncoder.encode(request.getPassword()))
-            .role(User.Role.USER)
-            .build();
-        User savedUser = userRepository.save(user);
+        // Получаем созданного пользователя для генерации токенов
+        UserDto userDto = usersGrpcClient.getGrpcUserByUsername(request.getUsername());
         
-        var accessToken = jwtService.generateAccessToken(savedUser);
-        var refreshTokenEntity = refreshTokenService.createRefreshToken(savedUser);
-        var refreshTokenJwt = refreshTokenService.generateRefreshTokenJwt(savedUser, refreshTokenEntity.getToken());
+        var accessToken = jwtService.generateAccessToken(userDto);
+        var refreshTokenEntity = refreshTokenService.createRefreshToken(userDto);
+        var refreshTokenJwt = refreshTokenService.generateRefreshTokenJwt(userDto, refreshTokenEntity.getToken());
         
-        return new AuthResponse(accessToken, refreshTokenJwt, savedUser.getUsername(), savedUser.getEmail());
+        return new AuthResponse(accessToken, refreshTokenJwt, userDto.getUsername(), userDto.getEmail());
     }
 
     public AuthResponse login(LoginRequest request) {
+        // Аутентификация через Spring Security (использует CustomUserDetailsService с gRPC)
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
 
-        User user = userRepository.findByUsername(request.getUsername())
-            .orElseThrow(() -> new TokenException("User not found"));
+        // Получаем пользователя через gRPC сервис
+        UserDto grpcUser = usersGrpcClient.getGrpcUserByUsername(request.getUsername());
 
-        var accessToken = jwtService.generateAccessToken(user);
-        var refreshTokenEntity = refreshTokenService.createRefreshToken(user);
-        var refreshTokenJwt = refreshTokenService.generateRefreshTokenJwt(user, refreshTokenEntity.getToken());
+        var accessToken = jwtService.generateAccessToken(grpcUser);
+        var refreshTokenEntity = refreshTokenService.createRefreshToken(grpcUser);
+        var refreshTokenJwt = refreshTokenService.generateRefreshTokenJwt(grpcUser, refreshTokenEntity.getToken());
         
-        return new AuthResponse(accessToken, refreshTokenJwt, user.getUsername(), user.getEmail());
+        return new AuthResponse(accessToken, refreshTokenJwt, grpcUser.getUsername(), grpcUser.getEmail());
     }
 
     public AuthResponse refreshToken(String refreshTokenJwt) {
@@ -90,16 +101,17 @@ public class AuthService {
         // 5. Проверяем срок действия
         token = refreshTokenService.verifyExpiration(token);
         
-        User user = token.getUser();
+        // Получаем актуальные данные пользователя через gRPC
+        UserDto grpcUser = usersGrpcClient.getGrpcUserByUsername(username);
         
         // 6. Генерируем новые токены
-        var accessToken = jwtService.generateAccessToken(user);
-        var newRefreshTokenEntity = refreshTokenService.createRefreshToken(user);
-        var newRefreshTokenJwt = refreshTokenService.generateRefreshTokenJwt(user, newRefreshTokenEntity.getToken());
+        var accessToken = jwtService.generateAccessToken(grpcUser);
+        var newRefreshTokenEntity = refreshTokenService.createRefreshToken(grpcUser);
+        var newRefreshTokenJwt = refreshTokenService.generateRefreshTokenJwt(grpcUser, newRefreshTokenEntity.getToken());
         
         log.info("Token refreshed successfully for user: {}", username);
         
-        return new AuthResponse(accessToken, newRefreshTokenJwt, user.getUsername(), user.getEmail());
+        return new AuthResponse(accessToken, newRefreshTokenJwt, grpcUser.getUsername(), grpcUser.getEmail());
     }
 
     public LogoutResponse logout(String refreshTokenJwt) {
@@ -123,12 +135,13 @@ public class AuthService {
             throw new TokenException("Token user mismatch");
         }
         
-        User user = token.getUser();
+        // Получаем актуальные данные пользователя через gRPC
+        UserDto grpcUser = usersGrpcClient.getGrpcUserByUsername(username);
         
         log.debug("Logging out user: {}", username);
         
         // 5. Удаляем refresh token из базы данных
-        boolean wasDeleted = refreshTokenService.deleteByUser(user);
+        boolean wasDeleted = refreshTokenService.deleteByUser(grpcUser);
         
         String message = wasDeleted 
             ? "Successfully logged out" 
