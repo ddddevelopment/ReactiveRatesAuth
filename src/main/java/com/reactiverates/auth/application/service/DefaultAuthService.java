@@ -91,20 +91,24 @@ public class DefaultAuthService implements AuthService {
         String tokenId = jwtService.extractTokenId(refreshTokenJwt);
         String username = jwtService.extractUsername(refreshTokenJwt);
         
+        // Проверяем существование токена в БД
         RefreshToken token = refreshTokenService.findByTokenId(tokenId)
             .orElseThrow(() -> new TokenException("Refresh token not found in database"));
         
-        if (!token.getUser().getUsername().equals(username)) {
-            throw new TokenException("Token user mismatch");
-        }
-        
+        // Проверяем срок действия
         token = refreshTokenService.verifyExpiration(token);
         
+        // Получаем актуальные данные пользователя из gRPC сервиса
         Optional<UserDto> userDtoOptional = usersService.getUserByUsername(username);
         if (userDtoOptional.isEmpty()) {
             throw new TokenException("User not found: " + username);
         }
         UserDto userDto = userDtoOptional.get();
+        
+        // Проверяем, что токен принадлежит правильному пользователю
+        if (!token.getUserId().equals(userDto.getId())) {
+            throw new TokenException("Token user mismatch");
+        }
         
         var accessToken = jwtService.generateAccessToken(userDto);
         var newRefreshTokenEntity = refreshTokenService.createRefreshToken(userDto);
@@ -129,15 +133,16 @@ public class DefaultAuthService implements AuthService {
         RefreshToken token = refreshTokenService.findByTokenId(tokenId)
             .orElseThrow(() -> new TokenException("Refresh token not found or already invalid"));
         
-        if (!token.getUser().getUsername().equals(username)) {
-            throw new TokenException("Token user mismatch");
-        }
-        
         Optional<UserDto> userDtoOptional = usersService.getUserByUsername(username);
         if (userDtoOptional.isEmpty()) {
             throw new TokenException("User not found: " + username);
         }
         UserDto userDto = userDtoOptional.get();
+        
+        // Проверяем, что токен принадлежит правильному пользователю
+        if (!token.getUserId().equals(userDto.getId())) {
+            throw new TokenException("Token user mismatch");
+        }
         
         log.debug("Logging out user: {}", username);
         

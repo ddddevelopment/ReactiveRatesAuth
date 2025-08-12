@@ -11,7 +11,6 @@ import com.reactiverates.auth.domain.exception.TokenException;
 import com.reactiverates.auth.domain.model.UserDto;
 import com.reactiverates.auth.domain.service.RefreshTokenService;
 import com.reactiverates.auth.infrastructure.persistance.entity.RefreshToken;
-import com.reactiverates.auth.infrastructure.persistance.entity.User;
 import com.reactiverates.auth.infrastructure.persistance.repository.RefreshTokenRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -27,9 +26,9 @@ public class DefaultRefreshTokenService implements RefreshTokenService {
     private Long refreshTokenExpiration;
     
     @Override
-	public RefreshToken createRefreshToken(User user) {
+	public RefreshToken createRefreshToken(UserDto userDto) {
         // Удаляем старый refresh token если существует
-        refreshTokenRepository.findByUser(user).ifPresent(oldToken -> {
+        refreshTokenRepository.findByUserId(userDto.getId()).ifPresent(oldToken -> {
             refreshTokenRepository.delete(oldToken);
         });
         
@@ -37,7 +36,7 @@ public class DefaultRefreshTokenService implements RefreshTokenService {
         String tokenId = UUID.randomUUID().toString();
         
         RefreshToken refreshToken = RefreshToken.builder()
-            .user(user)
+            .userId(userDto.getId()) // Храним только ID пользователя
             .token(tokenId) // UUID в БД
             .expiryDate(Instant.now().plusMillis(refreshTokenExpiration))
             .build();
@@ -46,28 +45,8 @@ public class DefaultRefreshTokenService implements RefreshTokenService {
     }
     
     @Override
-	public RefreshToken createRefreshToken(UserDto grpcUser) {
-        // Для GrpcUser мы создаем временный User entity для хранения в БД
-        // Это необходимо для совместимости с существующей структурой БД
-        User tempUser = User.builder()
-            .id(grpcUser.getId())
-            .username(grpcUser.getUsername())
-            .email(grpcUser.getEmail())
-            .password(grpcUser.getPassword())
-            .role(User.Role.valueOf(grpcUser.getRole().name()))
-            .build();
-        
-        return createRefreshToken(tempUser);
-    }
-    
-    @Override
-	public String generateRefreshTokenJwt(User user, String tokenId) {
-        return jwtService.generateRefreshToken(user, tokenId);
-    }
-    
-    @Override
-	public String generateRefreshTokenJwt(UserDto grpcUser, String tokenId) {
-        return jwtService.generateRefreshToken(grpcUser, tokenId);
+	public String generateRefreshTokenJwt(UserDto userDto, String tokenId) {
+        return jwtService.generateRefreshToken(userDto, tokenId);
     }
     
     @Override
@@ -85,27 +64,13 @@ public class DefaultRefreshTokenService implements RefreshTokenService {
     }
     
     @Override
-	public boolean deleteByUser(User user) {
-        Optional<RefreshToken> existingToken = refreshTokenRepository.findByUser(user);
+	public boolean deleteByUser(UserDto userDto) {
+        Optional<RefreshToken> existingToken = refreshTokenRepository.findByUserId(userDto.getId());
         if (existingToken.isPresent()) {
-            refreshTokenRepository.deleteByUser(user);
+            refreshTokenRepository.deleteByUserId(userDto.getId());
             return true;
         }
         return false;
-    }
-    
-    @Override
-	public boolean deleteByUser(UserDto grpcUser) {
-        // Создаем временный User entity для поиска в БД
-        User tempUser = User.builder()
-            .id(grpcUser.getId())
-            .username(grpcUser.getUsername())
-            .email(grpcUser.getEmail())
-            .password(grpcUser.getPassword())
-            .role(User.Role.valueOf(grpcUser.getRole().name()))
-            .build();
-        
-        return deleteByUser(tempUser);
     }
     
     @Override

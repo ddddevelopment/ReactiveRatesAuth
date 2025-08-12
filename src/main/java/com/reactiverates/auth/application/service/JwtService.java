@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import com.reactiverates.auth.domain.model.UserDto;
 
 @Service
 @RequiredArgsConstructor
@@ -100,10 +101,16 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
         claims.put("tokenId", tokenId);
-        claims.put("authorities", userDetails.getAuthorities().stream()
-            .map(authority -> Map.of("authority", authority.getAuthority()))
-            .toList());
+        // Убираем дублирование данных пользователя - они уже есть в БД
         return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
+    }
+
+    public String generateRefreshToken(UserDto userDto, String tokenId) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("type", "refresh");
+        claims.put("tokenId", tokenId);
+        // Убираем дублирование данных пользователя - они уже есть в БД
+        return createToken(claims, userDto.getUsername(), refreshTokenExpiration);
     }
 
     private String createToken(Map<String, Object> claims, String username, Long expiration) {
