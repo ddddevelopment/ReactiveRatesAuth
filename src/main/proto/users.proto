@@ -38,6 +38,8 @@ message UserResponse {
   string updated_at = 10;
   string full_name = 11;
   string password_hash = 12;
+  bool found = 13;
+  string message = 14;
 }
 
 enum UserRole {

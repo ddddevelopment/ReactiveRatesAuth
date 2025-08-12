@@ -24,29 +24,11 @@ public class UserDto implements UserDetails {
     private final String updatedAt;
     private final String fullName;
 
-    public UserDto(UserResponse userResponse, String password) {
-        this.id = userResponse.getId();
-        this.username = userResponse.getUsername();
-        this.email = userResponse.getEmail();
-        this.password = password; // Пароль должен передаваться отдельно, так как его нет в UserResponse
-        this.firstName = userResponse.getFirstName();
-        this.lastName = userResponse.getLastName();
-        this.phoneNumber = userResponse.getPhoneNumber();
-        this.role = userResponse.getRole();
-        this.isActive = userResponse.getIsActive();
-        this.createdAt = userResponse.getCreatedAt();
-        this.updatedAt = userResponse.getUpdatedAt();
-        this.fullName = userResponse.getFullName();
-    }
-
-    /**
-     * Конструктор для создания UserDto из UserResponse с password_hash
-     */
     public UserDto(UserResponse userResponse) {
         this.id = userResponse.getId();
         this.username = userResponse.getUsername();
         this.email = userResponse.getEmail();
-        this.password = userResponse.getPasswordHash(); // Используем password_hash из gRPC ответа
+        this.password = userResponse.getPasswordHash();
         this.firstName = userResponse.getFirstName();
         this.lastName = userResponse.getLastName();
         this.phoneNumber = userResponse.getPhoneNumber();
