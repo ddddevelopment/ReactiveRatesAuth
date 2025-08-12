@@ -39,6 +39,24 @@ public class UserDto implements UserDetails {
         this.fullName = userResponse.getFullName();
     }
 
+    /**
+     * Конструктор для создания UserDto из UserResponse с password_hash
+     */
+    public UserDto(UserResponse userResponse) {
+        this.id = userResponse.getId();
+        this.username = userResponse.getUsername();
+        this.email = userResponse.getEmail();
+        this.password = userResponse.getPasswordHash(); // Используем password_hash из gRPC ответа
+        this.firstName = userResponse.getFirstName();
+        this.lastName = userResponse.getLastName();
+        this.phoneNumber = userResponse.getPhoneNumber();
+        this.role = userResponse.getRole();
+        this.isActive = userResponse.getIsActive();
+        this.createdAt = userResponse.getCreatedAt();
+        this.updatedAt = userResponse.getUpdatedAt();
+        this.fullName = userResponse.getFullName();
+    }
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         String roleName = "ROLE_" + role.name();

@@ -97,12 +97,8 @@ public class UsersGrpcClient {
         try {
             UserResponse userResponse = getUserByUsername(username);
             
-            // Создаем GrpcUser с зашифрованным паролем
-            // Примечание: в реальном приложении пароль должен храниться в gRPC сервисе
-            // Здесь мы создаем временный зашифрованный пароль для совместимости
-            String encodedPassword = passwordEncoder.encode("temporary_password");
-            
-            UserDto userDto = new UserDto(userResponse, encodedPassword);
+            // Создаем UserDto с password_hash из gRPC ответа
+            UserDto userDto = new UserDto(userResponse);
             
             if (!userDto.isEnabled()) {
                 throw new UsernameNotFoundException("User account is disabled: " + username);
@@ -128,14 +124,22 @@ public class UsersGrpcClient {
                 return false;
             }
             
-            // Примечание: в реальном приложении пароль должен проверяться в gRPC сервисе
-            // Здесь мы предполагаем, что пароль уже зашифрован и хранится в gRPC сервисе
-            // Для демонстрации используем временную логику
+            // Проверяем пароль, используя password_hash из gRPC ответа
+            String storedPasswordHash = userResponse.getPasswordHash();
+            if (storedPasswordHash == null || storedPasswordHash.isEmpty()) {
+                log.warn("Password hash is null or empty for user: {}", username);
+                return false;
+            }
             
-            // TODO: Добавить метод в gRPC сервис для проверки пароля
-            // Пока что возвращаем true для демонстрации
-            log.info("User authentication successful: {}", username);
-            return true;
+            boolean passwordMatches = passwordEncoder.matches(rawPassword, storedPasswordHash);
+            
+            if (passwordMatches) {
+                log.info("User authentication successful: {}", username);
+            } else {
+                log.warn("Password mismatch for user: {}", username);
+            }
+            
+            return passwordMatches;
             
         } catch (Exception e) {
             log.error("Error authenticating user via gRPC: {}", e.getMessage(), e);
@@ -144,15 +148,14 @@ public class UsersGrpcClient {
     }
     
     /**
-     * Получает GrpcUser по username для использования в AuthService
+     * Получает UserDto по username для использования в AuthService
      */
     public UserDto getGrpcUserByUsername(String username) {
         try {
             UserResponse userResponse = getUserByUsername(username);
-            String encodedPassword = passwordEncoder.encode("temporary_password");
-            return new UserDto(userResponse, encodedPassword);
+            return new UserDto(userResponse); // Используем новый конструктор с password_hash
         } catch (Exception e) {
-            log.error("Error getting GrpcUser by username: {}", e.getMessage(), e);
+            log.error("Error getting UserDto by username: {}", e.getMessage(), e);
             throw new RuntimeException("Failed to get user via gRPC", e);
         }
     }
