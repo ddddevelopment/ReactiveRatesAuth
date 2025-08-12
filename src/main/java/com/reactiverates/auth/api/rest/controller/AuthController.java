@@ -7,12 +7,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.reactiverates.auth.application.service.AuthService;
 import com.reactiverates.auth.domain.model.AuthResponse;
 import com.reactiverates.auth.domain.model.LoginRequest;
 import com.reactiverates.auth.domain.model.LogoutResponse;
 import com.reactiverates.auth.domain.model.RefreshTokenRequest;
 import com.reactiverates.auth.domain.model.RegisterRequest;
+import com.reactiverates.auth.domain.service.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;

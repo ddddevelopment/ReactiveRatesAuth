@@ -1,4 +1,4 @@
-package com.reactiverates.auth.infrastructure.config;
+package com.reactiverates.auth.api.rest;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

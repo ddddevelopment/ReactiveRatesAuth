@@ -10,6 +10,8 @@ import com.reactiverates.auth.domain.model.UserDto;
 import com.reactiverates.auth.domain.model.LoginRequest;
 import com.reactiverates.auth.domain.model.LogoutResponse;
 import com.reactiverates.auth.domain.model.RegisterRequest;
+import com.reactiverates.auth.domain.service.AuthService;
+import com.reactiverates.auth.domain.service.RefreshTokenService;
 import com.reactiverates.auth.domain.service.UsersService;
 import com.reactiverates.auth.infrastructure.persistance.entity.RefreshToken;
 
@@ -21,13 +23,14 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AuthService {
+public class DefaultAuthService implements AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService refreshTokenService;
     private final UsersService usersService;
 
-    public AuthResponse register(RegisterRequest request) {
+    @Override
+	public AuthResponse register(RegisterRequest request) {
         Optional<UserDto> existingUser = usersService.getUserByUsername(request.getUsername());
         if (existingUser.isPresent()) {
             throw new TokenException("User already exists");
@@ -58,7 +61,8 @@ public class AuthService {
         }
     }
 
-    public AuthResponse login(LoginRequest request) {
+    @Override
+	public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
@@ -76,7 +80,8 @@ public class AuthService {
         return new AuthResponse(accessToken, refreshTokenJwt, userDto.getUsername(), userDto.getEmail());
     }
 
-    public AuthResponse refreshToken(String refreshTokenJwt) {
+    @Override
+	public AuthResponse refreshToken(String refreshTokenJwt) {
         log.info("Attempting to refresh token");
         
         if (!jwtService.isRefreshToken(refreshTokenJwt)) {
@@ -110,7 +115,8 @@ public class AuthService {
         return new AuthResponse(accessToken, newRefreshTokenJwt, userDto.getUsername(), userDto.getEmail());
     }
 
-    public LogoutResponse logout(String refreshTokenJwt) {
+    @Override
+	public LogoutResponse logout(String refreshTokenJwt) {
         log.info("Attempting logout with refresh token");
         
         if (!jwtService.isRefreshToken(refreshTokenJwt)) {
