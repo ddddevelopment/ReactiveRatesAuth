@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import com.reactiverates.auth.domain.model.UserDto;
 
 @Service
 @RequiredArgsConstructor
@@ -52,11 +51,11 @@ public class JwtService {
     }
     
     @SuppressWarnings("unchecked")
-    public List<Map<String, String>> extractAuthorities(String token) {
+    public List<String> extractRoles(String token) {
         return extractClaim(token, claims -> {
-            Object authoritiesObj = claims.get("authorities");
-            if (authoritiesObj instanceof List) {
-                return (List<Map<String, String>>) authoritiesObj;
+            Object rolesObj = claims.get("roles");
+            if (rolesObj instanceof List) {
+                return (List<String>) rolesObj;
             }
             return List.of();
         });
@@ -82,35 +81,17 @@ public class JwtService {
     public String generateAccessToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "access");
-        claims.put("authorities", userDetails.getAuthorities().stream()
-            .map(authority -> Map.of("authority", authority.getAuthority()))
+        claims.put("roles", userDetails.getAuthorities().stream()
+            .map(authority -> authority.getAuthority())
             .toList());
         return createToken(claims, userDetails.getUsername(), accessTokenExpiration);
-    }
-
-    public String generateRefreshToken(UserDetails userDetails) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("type", "refresh");
-        claims.put("authorities", userDetails.getAuthorities().stream()
-            .map(authority -> Map.of("authority", authority.getAuthority()))
-            .toList());
-        return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
     }
     
     public String generateRefreshToken(UserDetails userDetails, String tokenId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", "refresh");
         claims.put("tokenId", tokenId);
-        // Убираем дублирование данных пользователя - они уже есть в БД
         return createToken(claims, userDetails.getUsername(), refreshTokenExpiration);
-    }
-
-    public String generateRefreshToken(UserDto userDto, String tokenId) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("type", "refresh");
-        claims.put("tokenId", tokenId);
-        // Убираем дублирование данных пользователя - они уже есть в БД
-        return createToken(claims, userDto.getUsername(), refreshTokenExpiration);
     }
 
     private String createToken(Map<String, Object> claims, String username, Long expiration) {

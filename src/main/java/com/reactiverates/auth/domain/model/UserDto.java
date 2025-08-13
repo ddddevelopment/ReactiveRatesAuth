@@ -2,6 +2,9 @@ package com.reactiverates.auth.domain.model;
 
 import com.reactiverates.users.grpc.UserResponse;
 import com.reactiverates.users.grpc.UserRole;
+
+import lombok.Getter;
+
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
+@Getter
 public class UserDto implements UserDetails {
     
     private final Long id;
@@ -41,7 +45,7 @@ public class UserDto implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        String roleName = "ROLE_" + role.name();
+        String roleName = role.name();
         return List.of(new SimpleGrantedAuthority(roleName));
     }
 
@@ -73,46 +77,5 @@ public class UserDto implements UserDetails {
     @Override
     public boolean isEnabled() {
         return isActive;
-    }
-
-    // Геттеры для дополнительных полей
-    public Long getId() {
-        return id;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public String getPhoneNumber() {
-        return phoneNumber;
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public boolean isActive() {
-        return isActive;
-    }
-
-    public String getCreatedAt() {
-        return createdAt;
-    }
-
-    public String getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public String getFullName() {
-        return fullName;
     }
 }

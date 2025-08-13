@@ -5,7 +5,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import com.reactiverates.auth.infrastructure.grpc.UsersGrpcClient;
+import com.reactiverates.auth.domain.service.UsersService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,13 +15,13 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class CustomUserDetailsService implements UserDetailsService {
     
-    private final UsersGrpcClient usersGrpcClient;
+    private final UsersService usersService;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         try {
             log.info("Loading user details for username: {}", username);
-            UserDetails userDetails = usersGrpcClient.loadUserByUsername(username);
+            UserDetails userDetails = usersService.loadUserByUsername(username);
             log.info("User details loaded successfully for username: {}", username);
             return userDetails;
         } catch (UsernameNotFoundException e) {
