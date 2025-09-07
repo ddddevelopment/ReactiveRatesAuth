@@ -3,7 +3,18 @@ server:
 
 spring:
   application:
-    name: auth
+    name: auth-service
+  config:
+    import: "optional:configserver:http://config-user:config-password@localhost:8888"
+  cloud:
+    config:
+      uri: http://localhost:8888
+      username: config-user
+      password: config-password
+      fail-fast: false
+      retry:
+        initial-interval: 2000
+        max-attempts: 5
   
   datasource:
     url: jdbc:postgresql://localhost:5432/authdb
@@ -34,6 +45,15 @@ jwt:
   refresh-token:
     expiration: 604800000  # 7 дней
 
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+    lease-renewal-interval-in-seconds: 5
+    lease-expiration-duration-in-seconds: 10
+
 logging:
   level:
     com.reactiverates.auth: DEBUG
@@ -54,3 +74,13 @@ springdoc:
   show-actuator: false
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
+
+# OpenAPI custom configuration
+openapi:
+  server:
+    dev:
+      url: http://localhost:${server.port}
+      description: Локальная среда разработки
+    prod:
+      url: https://api.reactiverates.com
+      description: Продакшн сервер
